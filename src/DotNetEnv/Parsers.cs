@@ -8,28 +8,6 @@ namespace DotNetEnv
 {
     class Parsers
     {
-        public static KeyValuePair<string, string> SetEnvVar (KeyValuePair<string, string> kvp)
-        {
-            Environment.SetEnvironmentVariable(kvp.Key, kvp.Value);
-            return kvp;
-        }
-
-        public static KeyValuePair<string, string> DoNotSetEnvVar (KeyValuePair<string, string> kvp)
-        {
-            return kvp;
-        }
-
-        public static KeyValuePair<string, string> NoClobberSetEnvVar (KeyValuePair<string, string> kvp)
-        {
-            if (Environment.GetEnvironmentVariable(kvp.Key) == null)
-            {
-                Environment.SetEnvironmentVariable(kvp.Key, kvp.Value);
-            }
-            // not sure if maybe should return something different if avoided clobber... (current value?)
-            // probably not since the point is to return what the dotenv file reported, but it's arguable
-            return kvp;
-        }
-
         // helpful blog I discovered only after digging through all the Sprache source myself:
         // https://justinpealing.me.uk/post/2020-03-11-sprache1-chars/
 
@@ -37,8 +15,6 @@ namespace DotNetEnv
         private static readonly Parser<char> Backslash = Parse.Char('\\');
         private static readonly Parser<char> Underscore = Parse.Char('_');
         private static readonly Parser<char> InlineWhitespaceChars = Parse.Chars(" \t");
-
-        private const string EscapeChars = "abfnrtv\\'\"?$`";
 
         private static string ToEscapeChar (char escapedChar)
         {
@@ -141,7 +117,10 @@ namespace DotNetEnv
             from value in Parse.Repeat(Hex, 2, 8).Text()
             select ToUtf32Char(value);
 
-        internal static Parser<string> NotControlNorWhitespace (string exceptChars) =>
+        internal static readonly Parser<IEnumerable<char>> InlineCommentBeginOrControl =
+            Parse.String(" #").Or(Parse.String("\t#")).Or(Parse.Char(c => char.IsControl(c) && c != '\t', "control").Once());
+
+        internal static Parser<string> NotControlNorWhitespace(string exceptChars) =>
             Parse.Char(
                 c => !char.IsControl(c) && !char.IsWhiteSpace(c) && !exceptChars.Contains(c),
                 $"not control nor whitespace nor {exceptChars}"
@@ -150,14 +129,14 @@ namespace DotNetEnv
         internal static readonly Parser<IValue> InterpolatedEnvVar =
             from _d in DollarSign
             from id in Identifier
-            select new ValueInterpolated(id);
+            select new ValueInterpolated(id, string.Concat(_d, id));
 
         internal static readonly Parser<IValue> InterpolatedBracesEnvVar =
             from _d in DollarSign
             from _o in Parse.Char('{')
             from id in Identifier
             from _c in Parse.Char('}')
-            select new ValueInterpolated(id);
+            select new ValueInterpolated(id, string.Concat(_d, _o, id, _c));
 
         internal static readonly Parser<IValue> JustDollarValue =
             from d in DollarSign
@@ -176,14 +155,13 @@ namespace DotNetEnv
         // unquoted values can have interpolated variables,
         // but only inline whitespace -- until a comment,
         // and no escaped chars, nor byte code chars
-        // FIXME: would be nice to solve multi word with comment case with parser directly (no split + trim)
         internal static readonly Parser<ValueCalculator> UnquotedValue =
-            InterpolatedValue.Or(
-                NotControlNorWhitespace("'\"$")
-                .Or(InlineWhitespaceChars.AtLeastOnce().Text())
-                .AtLeastOnce()
-                .Select(strs => new ValueActual(strs))
-            ).Many().Select(vs => new ValueCalculator(vs).Split("[ \t]#").Trim());
+            InterpolatedValue
+                .Or(Parse.CharExcept('$').Except(InlineCommentBeginOrControl).AtLeastOnce().Select(x => (IValue)new ValueActual(string.Concat(x))))
+                .Except(InlineCommentBeginOrControl)
+                .Many()
+                .Except(Parse.Chars("'\""))
+                .Select(values => new ValueCalculator(values));
 
         // double quoted values can have everything: interpolated variables,
         // plus whitespace, escaped chars, and byte code chars
@@ -228,7 +206,7 @@ namespace DotNetEnv
 
         internal static readonly Parser<string> Comment =
             from _h in Parse.Char('#')
-            from comment in Parse.CharExcept("\r\n").Many().Text()
+            from comment in Parse.AnyChar.Except(Parse.LineTerminator).Many().Text()
             select comment;
 
         private static readonly Parser<string> InlineWhitespace =
@@ -243,7 +221,7 @@ namespace DotNetEnv
             from _ws in InlineWhitespaceChars.AtLeastOnce()
             select export;
 
-        internal static readonly Parser<KeyValuePair<string, string>> Assignment =
+        internal static readonly Parser<KeyValuePair<string, ValueCalculator>> Assignment =
             from _ws_head in InlineWhitespace
             from export in ExportExpression.Optional()
             from name in Identifier
@@ -254,20 +232,40 @@ namespace DotNetEnv
             from _ws_tail in InlineWhitespace
             from _c in Comment.Optional()
             from _lt in Parse.LineTerminator
-            select new KeyValuePair<string, string>(name, value.Value);
+            select new KeyValuePair<string, ValueCalculator>(name, value);
 
-        internal static readonly Parser<KeyValuePair<string, string>> Empty =
+        internal static readonly Parser<KeyValuePair<string, ValueCalculator>> Empty =
             from _ws in InlineWhitespace
             from _c in Comment.Optional()
             from _lt in Parse.LineTerminator
-            select new KeyValuePair<string, string>(null, null);
+            select new KeyValuePair<string, ValueCalculator>(null, null);
 
         public static IEnumerable<KeyValuePair<string, string>> ParseDotenvFile (
-            string contents,
-            Func<KeyValuePair<string, string>, KeyValuePair<string, string>> tranform
-        ) {
-            return Assignment.Select(tranform).Or(Empty).AtLeastOnce().End()
-                .Parse(contents).Where(kvp => kvp.Key != null);
+            string contents
+        )
+        {
+            var keyValuePairs = Assignment.Or(Empty)
+                .AtLeastOnce()
+                .End()
+                .Parse(contents)
+                .Where(x => x.Key != null);
+
+            var interpolatedKeyValuePairs = InterpolateValues(keyValuePairs);
+            
+            return interpolatedKeyValuePairs
+                .Where(kvp => kvp.Key != null);
+        }
+
+        private static IEnumerable<KeyValuePair<string, string>> InterpolateValues(IEnumerable<KeyValuePair<string, ValueCalculator>> keyValuePairs)
+        {
+            var actualValues = new Dictionary<string, string>();
+            
+            foreach (var keyValuePair in keyValuePairs)
+            {
+                var value = keyValuePair.Value.GetValue(actualValues);
+                actualValues[keyValuePair.Key] = value;
+                yield return new KeyValuePair<string, string>(keyValuePair.Key, value);
+            }
         }
     }
 }

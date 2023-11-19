@@ -64,25 +64,27 @@ namespace DotNetEnv
             }
         }
 
-        public static IEnumerable<KeyValuePair<string, string>> LoadContents (string contents, LoadOptions options = null)
+        public static IDictionary<string, string> LoadContents (string contents, LoadOptions options = null)
         {
             if (options == null) options = LoadOptions.DEFAULT;
 
+            var data = Parsers.ParseDotenvFile(contents)
+                .GroupBy(x => x.Key)
+                .Select(x => options.ClobberExistingVars ? x.Last() : x.First())
+                .ToDictionary();
+
             if (options.SetEnvVars)
             {
-                if (options.ClobberExistingVars)
+                foreach (var kvp in data)
                 {
-                    return Parsers.ParseDotenvFile(contents, Parsers.SetEnvVar);
-                }
-                else
-                {
-                    return Parsers.ParseDotenvFile(contents, Parsers.NoClobberSetEnvVar);
+                    if (options.ClobberExistingVars || Environment.GetEnvironmentVariable(kvp.Key) == null)
+                    {
+                        Environment.SetEnvironmentVariable(kvp.Key, kvp.Value);
+                    }
                 }
             }
-            else
-            {
-                return Parsers.ParseDotenvFile(contents, Parsers.DoNotSetEnvVar);
-            }
+
+            return data;
         }
 
         public static string GetString (string key, string fallback = default(string)) =>

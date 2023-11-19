@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
@@ -7,21 +6,23 @@ namespace DotNetEnv
 {
     public interface IValue
     {
-        string GetValue ();
+        string GetValue(Dictionary<string, string> actualValues = null);
     }
 
     public class ValueInterpolated : IValue
     {
         private readonly string _id;
+        private readonly string _origin;
 
-        public ValueInterpolated (string id)
+        public ValueInterpolated(string id, string origin)
         {
             _id = id;
+            _origin = origin;
         }
 
-        public string GetValue ()
+        public string GetValue(Dictionary<string, string> actualValues)
         {
-            return Environment.GetEnvironmentVariable(_id) ?? string.Empty;
+            return actualValues?.TryGetValue(_id, out var actualValue) == true ? actualValue : string.Empty;
         }
     }
 
@@ -37,7 +38,7 @@ namespace DotNetEnv
             _value = str;
         }
 
-        public string GetValue ()
+        public string GetValue(Dictionary<string, string> actualValues)
         {
             return _value;
         }
@@ -45,26 +46,17 @@ namespace DotNetEnv
 
     public class ValueCalculator
     {
-        public string Value { get; private set; }
+        private readonly IEnumerable<IValue> _values;
+        public string Value => GetValue(null);
 
         public ValueCalculator (IEnumerable<IValue> values)
         {
-            // note that we do want this lookup / calculation / GetValue calls in the ctor
-            // because it is the state of the world at the moment that this value is calculated
-            Value = string.Join(string.Empty, values.Select(val => val.GetValue()));
+            _values = values;
         }
 
-        public ValueCalculator Split (string pattern)
+        public string GetValue(Dictionary<string, string> actualValues)
         {
-            Value = new Regex(pattern).Split(Value, 2)[0];
-//            Value = Value.Split(new[] { delimiter }, 2, StringSplitOptions.None)[0];
-            return this;
-        }
-
-        public ValueCalculator Trim ()
-        {
-            Value = Value.Trim();
-            return this;
+            return string.Join(string.Empty, _values.Select(val => val.GetValue(actualValues)));
         }
     }
 }

@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Text;
 using Xunit;
 using Sprache;
-using DotNetEnv;
 
 namespace DotNetEnv.Tests
 {
@@ -22,6 +21,7 @@ namespace DotNetEnv.Tests
 
         private Dictionary<string,string> oldEnvvars = new Dictionary<string,string>();
         private static readonly string[] ALL_EVS = { EV_TEST, EV_DNE, EV_TEST_1, EV_TEST_2 };
+        private static readonly Dictionary<string, string> ActualValues = new Dictionary<string, string>() { ["ENVVAR_TEST"] = "ENV value" };
 
         public ParserTests ()
         {
@@ -141,16 +141,16 @@ namespace DotNetEnv.Tests
         [Fact]
         public void ParseInterpolatedEnvVar ()
         {
-            Assert.Equal("ENV value", Parsers.InterpolatedEnvVar.End().Parse("$ENVVAR_TEST").GetValue());
-            Assert.Equal("ENV value", Parsers.InterpolatedBracesEnvVar.End().Parse("${ENVVAR_TEST}").GetValue());
+            Assert.Equal("ENV value", Parsers.InterpolatedEnvVar.End().Parse("$ENVVAR_TEST").GetValue(ActualValues));
+            Assert.Equal("ENV value", Parsers.InterpolatedBracesEnvVar.End().Parse("${ENVVAR_TEST}").GetValue(ActualValues));
         }
 
         [Fact]
         public void ParseInterpolated ()
         {
-            Assert.Equal("ENV value", Parsers.InterpolatedValue.End().Parse("$ENVVAR_TEST").GetValue());
-            Assert.Equal("ENV value", Parsers.InterpolatedValue.End().Parse("${ENVVAR_TEST}").GetValue());
-            Assert.Equal("", Parsers.InterpolatedValue.End().Parse("${ENVVAR_TEST_DNE}").GetValue());
+            Assert.Equal("ENV value", Parsers.InterpolatedValue.End().Parse("$ENVVAR_TEST").GetValue(ActualValues));
+            Assert.Equal("ENV value", Parsers.InterpolatedValue.End().Parse("${ENVVAR_TEST}").GetValue(ActualValues));
+            Assert.Equal("", Parsers.InterpolatedValue.End().Parse("${ENVVAR_TEST_DNE}").GetValue(ActualValues));
         }
 
         [Fact]
@@ -215,34 +215,35 @@ namespace DotNetEnv.Tests
         {
             var kvp = new KeyValuePair<string, string>(null, null);
 
-            Assert.Equal(kvp, Parsers.Empty.End().Parse("# comment 1"));
-            Assert.Equal(kvp, Parsers.Empty.End().Parse("# comment 2\r\n"));
-            Assert.Equal(kvp, Parsers.Empty.End().Parse("# comment 3\n"));
+            var parser = Parsers.Empty.End().Select(x => new KeyValuePair<string, string>(x.Key, x.Value?.Value));
+            Assert.Equal(kvp, parser.Parse("# comment 1"));
+            Assert.Equal(kvp, parser.Parse("# comment 2\r\n"));
+            Assert.Equal(kvp, parser.Parse("# comment 3\n"));
 
-            Assert.Equal(kvp, Parsers.Empty.End().Parse(""));
-            Assert.Equal(kvp, Parsers.Empty.End().Parse("\r\n"));
-            Assert.Equal(kvp, Parsers.Empty.End().Parse("\n"));
+            Assert.Equal(kvp, parser.Parse(""));
+            Assert.Equal(kvp, parser.Parse("\r\n"));
+            Assert.Equal(kvp, parser.Parse("\n"));
 
-            Assert.Equal(kvp, Parsers.Empty.End().Parse("   # comment 1"));
-            Assert.Equal(kvp, Parsers.Empty.End().Parse("    \r\n"));
-            Assert.Equal(kvp, Parsers.Empty.End().Parse("#export EV_DNE=\"\\xe6\\x97\\xa5 $ENVVAR_TEST 本\"#ccccc\n"));
+            Assert.Equal(kvp, parser.Parse("   # comment 1"));
+            Assert.Equal(kvp, parser.Parse("    \r\n"));
+            Assert.Equal(kvp, parser.Parse("#export EV_DNE=\"\\xe6\\x97\\xa5 $ENVVAR_TEST 本\"#ccccc\n"));
         }
 
         [Fact]
         public void ParseUnquotedValue ()
         {
-            Assert.Equal("abc", Parsers.UnquotedValue.End().Parse("abc").Value);
-            Assert.Equal("a b c", Parsers.UnquotedValue.End().Parse("a b c").Value);
-            Assert.Equal("041", Parsers.UnquotedValue.End().Parse("041").Value);
-            Assert.Equal("日本", Parsers.UnquotedValue.End().Parse("日本").Value);
+            Assert.Equal("abc", Parsers.UnquotedValue.End().Parse("abc").GetValue(null));
+            Assert.Equal("a b c", Parsers.UnquotedValue.End().Parse("a b c").GetValue(null));
+            Assert.Equal("041", Parsers.UnquotedValue.End().Parse("041").GetValue(null));
+            Assert.Equal("日本", Parsers.UnquotedValue.End().Parse("日本").GetValue(null));
             // TODO: is it possible to get the system to recognize when a complete unicode char is present and start the next one then, without a space?
 //            Assert.Equal("日本", Parsers.UnquotedValue.Parse(@"\xe6\x97\xa5\xe6\x9c\xac"));
 
             Assert.Throws<ParseException>(() => Parsers.UnquotedValue.End().Parse("0\n1"));
             Assert.Throws<ParseException>(() => Parsers.UnquotedValue.End().Parse("'"));
 
-            Assert.Equal("a\\?b", Parsers.UnquotedValue.End().Parse("a\\?b").Value);
-            Assert.Equal(@"\xe6\x97\xa5ENV value本", Parsers.UnquotedValue.End().Parse("\\xe6\\x97\\xa5${ENVVAR_TEST}本").Value);
+            Assert.Equal("a\\?b", Parsers.UnquotedValue.End().Parse("a\\?b").GetValue(null));
+            Assert.Equal(@"\xe6\x97\xa5ENV value本", Parsers.UnquotedValue.End().Parse("\\xe6\\x97\\xa5${ENVVAR_TEST}本").GetValue(ActualValues));
         }
 
         [Fact]
@@ -254,7 +255,7 @@ namespace DotNetEnv.Tests
             Assert.Equal("日 本", Parsers.DoubleQuotedValueContents.End().Parse(@"\xe6\x97\xa5 \xe6\x9c\xac").Value);
             Assert.Equal("☠ ®", Parsers.DoubleQuotedValueContents.End().Parse(@"\xE2\x98\xA0 \uae").Value);
 
-            Assert.Equal("日 ENV value 本", Parsers.DoubleQuotedValueContents.End().Parse("\\xe6\\x97\\xa5 $ENVVAR_TEST 本").Value);
+            Assert.Equal("日 ENV value 本", Parsers.DoubleQuotedValueContents.End().Parse("\\xe6\\x97\\xa5 $ENVVAR_TEST 本").GetValue(ActualValues));
 
             Assert.Equal("a\"b c", Parsers.DoubleQuotedValueContents.End().Parse("a\\\"b c").Value);
             Assert.Equal("a'b c", Parsers.DoubleQuotedValueContents.End().Parse("a'b c").Value);
@@ -296,7 +297,7 @@ namespace DotNetEnv.Tests
             Assert.Equal("a'bc", Parsers.DoubleQuotedValue.End().Parse("\"a'bc\"").Value);
             Assert.Equal("a\"bc", Parsers.DoubleQuotedValue.End().Parse("\"a\\\"bc\"").Value);
 
-            Assert.Equal("日 ENV value 本", Parsers.DoubleQuotedValue.End().Parse("\"\\xe6\\x97\\xa5 $ENVVAR_TEST 本\"").Value);
+            Assert.Equal("日 ENV value 本", Parsers.DoubleQuotedValue.End().Parse("\"\\xe6\\x97\\xa5 $ENVVAR_TEST 本\"").GetValue(ActualValues));
         }
 
         [Fact]
@@ -327,7 +328,7 @@ namespace DotNetEnv.Tests
             Assert.Equal("日 本", Parsers.Value.End().Parse("\"\\xe6\\x97\\xa5 \\xe6\\x9c\\xac\"").Value);
             Assert.Equal("☠ ®", Parsers.Value.End().Parse("\"\\xE2\\x98\\xA0 \\uae\"").Value);
 
-            Assert.Equal("日 ENV value 本", Parsers.Value.End().Parse("\"\\xe6\\x97\\xa5 $ENVVAR_TEST 本\"").Value);
+            Assert.Equal("日 ENV value 本", Parsers.Value.End().Parse("\"\\xe6\\x97\\xa5 $ENVVAR_TEST 本\"").GetValue(ActualValues));
         }
 
         [Fact]
@@ -337,7 +338,7 @@ namespace DotNetEnv.Tests
             {
                 var kvp = Parsers.Assignment.End().Parse(input);
                 Assert.Equal(key, kvp.Key);
-                Assert.Equal(value, kvp.Value);
+                Assert.Equal(value, kvp.Value.GetValue(ActualValues));
             };
 
             testParse("EV_DNE", "abc", "EV_DNE=abc");
@@ -351,7 +352,7 @@ namespace DotNetEnv.Tests
 
             var kvp = Parsers.Assignment.End().Parse("EV_DNE=");
             Assert.Equal("EV_DNE", kvp.Key);
-            Assert.Equal("", kvp.Value);
+            Assert.Equal("", kvp.Value.Value);
             // Note that dotnet returns null if the env var is empty -- even if it was set to empty!
             Assert.Null(Environment.GetEnvironmentVariable("EV_DNE"));
 
@@ -393,14 +394,13 @@ namespace DotNetEnv.Tests
         {
             Action<KeyValuePair<string, string>[], string> testParse = (expecteds, input) =>
             {
-                var outputs = Parsers.ParseDotenvFile(input, Parsers.SetEnvVar).ToArray();
+                var outputs = Parsers.ParseDotenvFile(input).ToArray();
                 Assert.Equal(expecteds.Length, outputs.Length);
 
                 for (var i = 0; i < outputs.Length; i++)
                 {
                     Assert.Equal(expecteds[i].Key, outputs[i].Key);
                     Assert.Equal(expecteds[i].Value, outputs[i].Value);
-                    Assert.Equal(expecteds[i].Value, Environment.GetEnvironmentVariable(outputs[i].Key));
                 }
             };
 
@@ -424,7 +424,7 @@ namespace DotNetEnv.Tests
             testParse(expecteds, contents);
 
             contents = "EV_DNE=0\n1";
-            Assert.Throws<ParseException>(() => Parsers.ParseDotenvFile(contents, Parsers.SetEnvVar));
+            Assert.Throws<ParseException>(() => Parsers.ParseDotenvFile(contents));
 
             contents = @"
 # this is a header

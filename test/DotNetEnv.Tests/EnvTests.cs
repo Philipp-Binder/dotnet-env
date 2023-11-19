@@ -282,16 +282,14 @@ base64
             Environment.SetEnvironmentVariable("NVAR2", "_nvar2_");
 
             var kvps = DotNetEnv.Env.Load("./.env_other").ToArray();
-            Assert.Equal(35, kvps.Length);
+            Assert.Equal(34, kvps.Length);
             var dict = kvps.ToDictionary();
 
             // note that env vars get only the final assignment, but all are returned
             Assert.Equal("dupe2", Environment.GetEnvironmentVariable("DUPLICATE"));
             Assert.Equal("dupe2", dict["DUPLICATE"]);
             Assert.Equal("DUPLICATE", kvps[0].Key);
-            Assert.Equal("DUPLICATE", kvps[1].Key);
-            Assert.Equal("dupe1", kvps[0].Value);
-            Assert.Equal("dupe2", kvps[1].Value);
+            Assert.Equal("dupe2", kvps[0].Value);
 
             Assert.Equal("bar", Environment.GetEnvironmentVariable("TEST_KEYWORD_1"));
             Assert.Equal("12345", Environment.GetEnvironmentVariable("TEST_KEYWORD_2"));
@@ -359,7 +357,7 @@ base64
             ex = Assert.Throws<ParseException>(
                 () => DotNetEnv.Env.LoadContents("UNMATCHEDQUOTE='")
             );
-            Assert.Equal("Parsing failure: unexpected '''; expected LineTerminator (Line 1, Column 16); recently consumed: CHEDQUOTE=", ex.Message);
+            Assert.Equal("Parsing failure: Unexpected end of input reached; expected ' (Line 1, Column 17); recently consumed: HEDQUOTE='", ex.Message);
 
             ex = Assert.Throws<ParseException>(
                 () => DotNetEnv.Env.LoadContents("BADQUOTE='\\''")
@@ -369,7 +367,7 @@ base64
             ex = Assert.Throws<ParseException>(
                 () => DotNetEnv.Env.LoadContents("UNMATCHEDQUOTE=\"")
             );
-            Assert.Equal("Parsing failure: unexpected '\"'; expected LineTerminator (Line 1, Column 16); recently consumed: CHEDQUOTE=", ex.Message);
+            Assert.Equal("Parsing failure: Unexpected end of input reached; expected \" (Line 1, Column 17); recently consumed: HEDQUOTE=\"", ex.Message);
 
             ex = Assert.Throws<ParseException>(
                 () => DotNetEnv.Env.LoadContents("SSL_CERT=\"SPECIAL STUFF---\nLONG-BASE64\\ignore\"slash\"")
