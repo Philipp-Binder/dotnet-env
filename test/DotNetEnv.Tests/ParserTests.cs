@@ -215,17 +215,17 @@ namespace DotNetEnv.Tests
         {
             var kvp = new KeyValuePair<string, string>(null, null);
 
-            Assert.Equal(kvp, Parsers.Empty.End().Parse("# comment 1"));
-            Assert.Equal(kvp, Parsers.Empty.End().Parse("# comment 2\r\n"));
-            Assert.Equal(kvp, Parsers.Empty.End().Parse("# comment 3\n"));
+            Assert.Equal(kvp, Parsers.EmptyLine.End().Parse("# comment 1"));
+            Assert.Equal(kvp, Parsers.EmptyLine.End().Parse("# comment 2\r\n"));
+            Assert.Equal(kvp, Parsers.EmptyLine.End().Parse("# comment 3\n"));
 
-            Assert.Equal(kvp, Parsers.Empty.End().Parse(""));
-            Assert.Equal(kvp, Parsers.Empty.End().Parse("\r\n"));
-            Assert.Equal(kvp, Parsers.Empty.End().Parse("\n"));
+            Assert.Equal(kvp, Parsers.EmptyLine.End().Parse(""));
+            Assert.Equal(kvp, Parsers.EmptyLine.End().Parse("\r\n"));
+            Assert.Equal(kvp, Parsers.EmptyLine.End().Parse("\n"));
 
-            Assert.Equal(kvp, Parsers.Empty.End().Parse("   # comment 1"));
-            Assert.Equal(kvp, Parsers.Empty.End().Parse("    \r\n"));
-            Assert.Equal(kvp, Parsers.Empty.End().Parse("#export EV_DNE=\"\\xe6\\x97\\xa5 $ENVVAR_TEST 本\"#ccccc\n"));
+            Assert.Equal(kvp, Parsers.EmptyLine.End().Parse("   # comment 1"));
+            Assert.Equal(kvp, Parsers.EmptyLine.End().Parse("    \r\n"));
+            Assert.Equal(kvp, Parsers.EmptyLine.End().Parse("#export EV_DNE=\"\\xe6\\x97\\xa5 $ENVVAR_TEST 本\"#ccccc\n"));
         }
 
         [Fact]

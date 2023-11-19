@@ -349,39 +349,49 @@ base64
             ex = Assert.Throws<ParseException>(
                 () => DotNetEnv.Env.LoadContents("NOVALUE")
             );
-            Assert.Equal("Parsing failure: Unexpected end of input reached; expected = (Line 1, Column 8); recently consumed: NOVALUE", ex.Message);
+            Assert.Equal("Parsing failure: Unexpected end of input reached; expected AssignmentOperator (Line 1, Column 8); recently consumed: NOVALUE", ex.Message);
 
             ex = Assert.Throws<ParseException>(
-                () => DotNetEnv.Env.LoadContents("MULTI WORD KEY")
+                () => DotNetEnv.Env.LoadContents("=MISSING IDENTIFIER")
             );
-            Assert.Equal("Parsing failure: unexpected 'W'; expected = (Line 1, Column 7); recently consumed: MULTI ", ex.Message);
+            Assert.Equal("Parsing failure: unexpected '='; expected EndOfEmptyLine or Identifier (Line 1, Column 1); recently consumed: ", ex.Message);
+
+            ex = Assert.Throws<ParseException>(
+                () => DotNetEnv.Env.LoadContents(" =MISSING IDENTIFIER")
+            );
+            Assert.Equal("Parsing failure: unexpected '='; expected EndOfEmptyLine or Identifier (Line 1, Column 2); recently consumed:  ", ex.Message);
+
+            ex = Assert.Throws<ParseException>(
+                () => DotNetEnv.Env.LoadContents("MULTI WORD KEY=test")
+            );
+            Assert.Equal("Parsing failure: unexpected 'W'; expected AssignmentOperator (Line 1, Column 7); recently consumed: MULTI ", ex.Message);
 
             ex = Assert.Throws<ParseException>(
                 () => DotNetEnv.Env.LoadContents("UNMATCHEDQUOTE='")
             );
-            Assert.Equal("Parsing failure: unexpected '''; expected LineTerminator (Line 1, Column 16); recently consumed: CHEDQUOTE=", ex.Message);
+            Assert.Equal("Parsing failure: unexpected '''; expected EndOfAssignment (Line 1, Column 16); recently consumed: CHEDQUOTE=", ex.Message);
 
             ex = Assert.Throws<ParseException>(
                 () => DotNetEnv.Env.LoadContents("BADQUOTE='\\''")
             );
-            Assert.Equal("Parsing failure: unexpected '''; expected LineTerminator (Line 1, Column 13); recently consumed: DQUOTE='\\'", ex.Message);
+            Assert.Equal("Parsing failure: unexpected '''; expected EndOfAssignment (Line 1, Column 13); recently consumed: DQUOTE='\\'", ex.Message);
 
             ex = Assert.Throws<ParseException>(
                 () => DotNetEnv.Env.LoadContents("UNMATCHEDQUOTE=\"")
             );
-            Assert.Equal("Parsing failure: unexpected '\"'; expected LineTerminator (Line 1, Column 16); recently consumed: CHEDQUOTE=", ex.Message);
+            Assert.Equal("Parsing failure: unexpected '\"'; expected EndOfAssignment (Line 1, Column 16); recently consumed: CHEDQUOTE=", ex.Message);
 
             ex = Assert.Throws<ParseException>(
                 () => DotNetEnv.Env.LoadContents("SSL_CERT=\"SPECIAL STUFF---\nLONG-BASE64\\ignore\"slash\"")
             );
-            Assert.Equal("Parsing failure: unexpected 's'; expected LineTerminator (Line 2, Column 20); recently consumed: 64\\ignore\"", ex.Message);
+            Assert.Equal("Parsing failure: unexpected 's'; expected EndOfAssignment (Line 2, Column 20); recently consumed: 64\\ignore\"", ex.Message);
 
             // this test confirms that the entire file must be valid, not just at least one assignment at the start
             // otherwise it silently discards any remainder after the first failure, so long as at least one success...
             ex = Assert.Throws<ParseException>(
                 () => DotNetEnv.Env.LoadContents("OK=GOOD\nSSL_CERT=\"SPECIAL STUFF---\nLONG-BASE64\\ignore\"slash\"")
             );
-            Assert.Equal("Parsing failure: unexpected 'S'; expected end of input (Line 2, Column 1); recently consumed: OK=GOOD\n", ex.Message);
+            Assert.Equal("Parsing failure: unexpected 's'; expected EndOfAssignment (Line 3, Column 20); recently consumed: 64\\ignore\"", ex.Message);
         }
 
         [Fact]

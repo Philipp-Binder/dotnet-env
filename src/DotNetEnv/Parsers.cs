@@ -38,8 +38,6 @@ namespace DotNetEnv
         private static readonly Parser<char> Underscore = Parse.Char('_');
         private static readonly Parser<char> InlineWhitespaceChars = Parse.Chars(" \t");
 
-        private const string EscapeChars = "abfnrtv\\'\"?$`";
-
         private static string ToEscapeChar (char escapedChar)
         {
             switch (escapedChar)
@@ -115,30 +113,30 @@ namespace DotNetEnv
 
         internal static readonly Parser<byte> HexByte =
             from start in Parse.String("\\x")
-            from value in Parse.Repeat(Hex, 1, 2).Text()
+            from value in Hex.Repeat(1, 2).Text()
             select ToHexByte(value);
 
         internal static readonly Parser<byte> OctalByte =
             from _ in Backslash
-            from value in Parse.Repeat(Parse.Chars("01234567"), 1, 3).Text()
+            from value in Parse.Chars("01234567").Repeat(1, 3).Text()
             select ToOctalByte(value);
 
         internal static readonly Parser<string> OctalChar =
-            from value in Parse.Repeat(OctalByte, 1, 8)
+            from value in OctalByte.Repeat(1, 8)
             select ToUtf8Char(value);
 
         internal static readonly Parser<string> Utf8Char =
-            from value in Parse.Repeat(HexByte, 1, 4)
+            from value in HexByte.Repeat(1, 4)
             select ToUtf8Char(value);
 
         internal static readonly Parser<string> Utf16Char =
             from start in Parse.String("\\u")
-            from value in Parse.Repeat(Hex, 2, 4).Text()
+            from value in Hex.Repeat(2, 4).Text()
             select ToUtf16Char(value);
 
         internal static readonly Parser<string> Utf32Char =
             from start in Parse.String("\\U")
-            from value in Parse.Repeat(Hex, 2, 8).Text()
+            from value in Hex.Repeat(2, 8).Text()
             select ToUtf32Char(value);
 
         internal static Parser<string> NotControlNorWhitespace (string exceptChars) =>
@@ -159,7 +157,7 @@ namespace DotNetEnv
             from _c in Parse.Char('}')
             select new ValueInterpolated(id);
 
-        internal static readonly Parser<IValue> JustDollarValue =
+        private static readonly Parser<IValue> JustDollarValue =
             from d in DollarSign
             select new ValueActual(d.ToString());
 
@@ -228,7 +226,7 @@ namespace DotNetEnv
 
         internal static readonly Parser<string> Comment =
             from _h in Parse.Char('#')
-            from comment in Parse.CharExcept("\r\n").Many().Text()
+            from comment in Parse.AnyChar.Except(Parse.LineTerminator).Many().Text()
             select comment;
 
         private static readonly Parser<string> InlineWhitespace =
@@ -246,27 +244,27 @@ namespace DotNetEnv
         internal static readonly Parser<KeyValuePair<string, string>> Assignment =
             from _ws_head in InlineWhitespace
             from export in ExportExpression.Optional()
-            from name in Identifier
+            from name in Identifier.Named("Identifier")
             from _ws_pre in InlineWhitespace
-            from _eq in Parse.Char('=')
+            from _eq in Parse.Char('=').Named("AssignmentOperator")
             from _ws_post in InlineWhitespace
             from value in Value
             from _ws_tail in InlineWhitespace
             from _c in Comment.Optional()
-            from _lt in Parse.LineTerminator
+            from _lt in Parse.LineTerminator.Named("EndOfAssignment")
             select new KeyValuePair<string, string>(name, value.Value);
 
-        internal static readonly Parser<KeyValuePair<string, string>> Empty =
+        internal static readonly Parser<KeyValuePair<string, string>> EmptyLine =
             from _ws in InlineWhitespace
             from _c in Comment.Optional()
-            from _lt in Parse.LineTerminator
+            from _lt in Parse.LineTerminator.Named("EndOfEmptyLine")
             select new KeyValuePair<string, string>(null, null);
 
         public static IEnumerable<KeyValuePair<string, string>> ParseDotenvFile (
             string contents,
-            Func<KeyValuePair<string, string>, KeyValuePair<string, string>> tranform
+            Func<KeyValuePair<string, string>, KeyValuePair<string, string>> transform
         ) {
-            return Assignment.Select(tranform).Or(Empty).AtLeastOnce().End()
+            return EmptyLine.Or(Assignment.Select(transform)).XAtLeastOnce().End()
                 .Parse(contents).Where(kvp => kvp.Key != null);
         }
     }
