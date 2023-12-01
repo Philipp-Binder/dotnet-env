@@ -281,9 +281,10 @@ base64
             Environment.SetEnvironmentVariable("NVAR1", "_nvar1_");
             Environment.SetEnvironmentVariable("NVAR2", "_nvar2_");
 
-            var kvps = DotNetEnv.Env.Load("./.env_other").ToArray();
+            var envVarEnumeration = DotNetEnv.Env.Load("./.env_other");
+            var kvps = envVarEnumeration.ToArray();
             Assert.Equal(35, kvps.Length);
-            var dict = kvps.ToDictionary();
+            var dict = envVarEnumeration.UseLastOccurrence();
 
             // note that env vars get only the final assignment, but all are returned
             Assert.Equal("dupe2", Environment.GetEnvironmentVariable("DUPLICATE"));

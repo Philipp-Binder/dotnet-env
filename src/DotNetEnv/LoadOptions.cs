@@ -49,7 +49,7 @@ namespace DotNetEnv
         public LoadOptions NoClobber () => new LoadOptions(this, clobberExistingVars: false);
         public LoadOptions TraversePath () => new LoadOptions(this, onlyExactPath: false);
 
-        public IEnumerable<KeyValuePair<string, string>> Load (string path = null) => Env.Load(path, this);
-        public IEnumerable<KeyValuePair<string, string>> LoadMulti (string[] paths) => Env.LoadMulti(paths, this);
+        public EnvVarEnumeration Load (string path = null) => Env.Load(path, this);
+        public EnvVarEnumeration LoadMulti (string[] paths) => Env.LoadMulti(paths, this);
     }
 }

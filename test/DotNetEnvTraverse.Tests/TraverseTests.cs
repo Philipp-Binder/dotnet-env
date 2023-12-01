@@ -16,9 +16,9 @@ namespace DotNetEnvTraverse.Tests
         [Fact]
         public void LoadDotenvTraverse()
         {
-            var kvps = DotNetEnv.Env.TraversePath().Load().ToArray();
+            var kvps = DotNetEnv.Env.TraversePath().Load();
             Assert.Single(kvps);
-            var dict = kvps.ToDictionary();
+            var dict = kvps.UseLastOccurrence();
             Assert.Equal("here", dict["TEST"]);
             Assert.Equal("here", Environment.GetEnvironmentVariable("TEST"));
             Assert.Null(Environment.GetEnvironmentVariable("NAME"));
@@ -27,9 +27,9 @@ namespace DotNetEnvTraverse.Tests
         [Fact]
         public void LoadRenamedDotenvTraverse()
         {
-            var kvps = DotNetEnv.Env.TraversePath().Load("./.env").ToArray();
+            var kvps = DotNetEnv.Env.TraversePath().Load("./.env");
             Assert.Single(kvps);
-            var dict = kvps.ToDictionary();
+            var dict = kvps.UseLastOccurrence();
             Assert.Equal("here", dict["TEST"]);
             Assert.Equal("here", Environment.GetEnvironmentVariable("TEST"));
             Assert.Null(Environment.GetEnvironmentVariable("NAME"));
@@ -38,9 +38,9 @@ namespace DotNetEnvTraverse.Tests
         [Fact]
         public void LoadRenamedDotenvMuchTraverse()
         {
-            var kvps = DotNetEnv.Env.TraversePath().Load(".env_much_higher").ToArray();
+            var kvps = DotNetEnv.Env.TraversePath().Load(".env_much_higher");
             Assert.Single(kvps);
-            var dict = kvps.ToDictionary();
+            var dict = kvps.UseLastOccurrence();
             Assert.Equal("See DotNetEnvTraverse.Tests for why this is here", dict["TEST"]);
             Assert.Equal("See DotNetEnvTraverse.Tests for why this is here", Environment.GetEnvironmentVariable("TEST"));
             Assert.Null(Environment.GetEnvironmentVariable("NAME"));
@@ -49,9 +49,9 @@ namespace DotNetEnvTraverse.Tests
         [Fact]
         public void LoadOnlyDirectoryDotenvTraverse()
         {
-            var kvps = DotNetEnv.Env.TraversePath().Load("./").ToArray();
+            var kvps = DotNetEnv.Env.TraversePath().Load("./");
             Assert.Single(kvps);
-            var dict = kvps.ToDictionary();
+            var dict = kvps.UseLastOccurrence();
             Assert.Equal("here", dict["TEST"]);
             Assert.Equal("here", Environment.GetEnvironmentVariable("TEST"));
             Assert.Null(Environment.GetEnvironmentVariable("NAME"));

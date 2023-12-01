@@ -260,12 +260,12 @@ namespace DotNetEnv
             from _lt in Parse.LineTerminator.Named("EndOfEmptyLine")
             select new KeyValuePair<string, string>(null, null);
 
-        public static IEnumerable<KeyValuePair<string, string>> ParseDotenvFile (
+        public static EnvVarEnumeration ParseDotenvFile (
             string contents,
             Func<KeyValuePair<string, string>, KeyValuePair<string, string>> transform
         ) {
-            return EmptyLine.Or(Assignment.Select(transform)).XAtLeastOnce().End()
-                .Parse(contents).Where(kvp => kvp.Key != null);
+            return new EnvVarEnumeration(EmptyLine.Or(Assignment.Select(transform)).XAtLeastOnce().End()
+                .Parse(contents).Where(kvp => kvp.Key != null));
         }
     }
 }

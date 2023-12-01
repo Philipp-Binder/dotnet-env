@@ -10,15 +10,15 @@ namespace DotNetEnv
     {
         public const string DEFAULT_ENVFILENAME = ".env";
 
-        public static IEnumerable<KeyValuePair<string, string>> LoadMulti (string[] paths, LoadOptions options = null)
+        public static EnvVarEnumeration LoadMulti (string[] paths, LoadOptions options = null)
         {
-            return paths.Aggregate(
+            return new EnvVarEnumeration(paths.Aggregate(
                 Enumerable.Empty<KeyValuePair<string, string>>(),
-                (kvps, path) => kvps.Concat(Load(path, options))
+                (kvps, path) => kvps.Concat(Load(path, options)))
             );
         }
 
-        public static IEnumerable<KeyValuePair<string, string>> Load (string path = null, LoadOptions options = null)
+        public static EnvVarEnumeration Load (string path = null, LoadOptions options = null)
         {
             if (options == null) options = LoadOptions.DEFAULT;
 
@@ -50,12 +50,12 @@ namespace DotNetEnv
             // in production, there should be no .env file, so this should be the common code path
             if (path == null)
             {
-                return Enumerable.Empty<KeyValuePair<string, string>>();
+                return new EnvVarEnumeration(Enumerable.Empty<KeyValuePair<string, string>>());
             }
             return LoadContents(File.ReadAllText(path), options);
         }
 
-        public static IEnumerable<KeyValuePair<string, string>> Load (Stream file, LoadOptions options = null)
+        public static EnvVarEnumeration Load (Stream file, LoadOptions options = null)
         {
             using (var reader = new StreamReader(file))
             {
@@ -63,7 +63,7 @@ namespace DotNetEnv
             }
         }
 
-        public static IEnumerable<KeyValuePair<string, string>> LoadContents (string contents, LoadOptions options = null)
+        public static EnvVarEnumeration LoadContents (string contents, LoadOptions options = null)
         {
             if (options == null) options = LoadOptions.DEFAULT;
 
@@ -99,11 +99,5 @@ namespace DotNetEnv
         public static LoadOptions NoEnvVars () => LoadOptions.NoEnvVars();
         public static LoadOptions NoClobber () => LoadOptions.NoClobber();
         public static LoadOptions TraversePath () => LoadOptions.TraversePath();
-    }
-
-    public static class Extensions
-    {
-        public static Dictionary<string, string> ToDictionary (this IEnumerable<KeyValuePair<string, string>> kvps) =>
-            kvps.GroupBy(kv => kv.Key).ToDictionary(g => g.Key, g => g.Last().Value);
     }
 }
