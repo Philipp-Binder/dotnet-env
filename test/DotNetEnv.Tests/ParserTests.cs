@@ -17,7 +17,7 @@ namespace DotNetEnv.Tests
 
         public ParserTests ()
         {
-            Env.EnvVarSnapshot = new ConcurrentDictionary<string, string>()
+            Parsers.EnvVarSnapshot = new ConcurrentDictionary<string, string>()
             {
                 [EV_TEST] = "ENV value"
             };
@@ -25,7 +25,7 @@ namespace DotNetEnv.Tests
 
         public void Dispose ()
         {
-            Env.EnvVarSnapshot.Clear();
+            Parsers.EnvVarSnapshot.Clear();
         }
 
         [Theory]
