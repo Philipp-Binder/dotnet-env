@@ -83,16 +83,14 @@ namespace DotNetEnv
 
             previousValues = previousValues?.ToArray() ?? Array.Empty<KeyValuePair<string, string>>();
 
-            var envVarSnapshot = Environment.GetEnvironmentVariables().Cast<DictionaryEntry>()
-                .Select(entry => new KeyValuePair<string, string>(entry.Key.ToString(), entry.Value.ToString()))
-                .ToArray();
-
             var dictionaryOption = options.ClobberExistingVars
                 ? CreateDictionaryOption.TakeLast
                 : CreateDictionaryOption.TakeFirst;
 
-            var actualValues = new ConcurrentDictionary<string, string>(envVarSnapshot.Concat(previousValues)
-                .ToDotEnvDictionary(dictionaryOption));
+            var actualValues =
+                (options.IncludeEnvVars ? GetEnvVarSnapshot() : Array.Empty<KeyValuePair<string, string>>())
+                .Concat(previousValues)
+                .ToDotEnvDictionary(dictionaryOption);
 
             var pairs = Parsers.ParseDotenvFile(contents, options.ClobberExistingVars, actualValues);
 
@@ -111,23 +109,31 @@ namespace DotNetEnv
             return unClobberedPairs.ToDotEnvDictionary(dictionaryOption);
         }
 
-        public static string GetString(string key, string fallback = default(string)) =>
+        private static KeyValuePair<string, string>[] GetEnvVarSnapshot() =>
+            Environment.GetEnvironmentVariables().Cast<DictionaryEntry>()
+                .Select(entry => new KeyValuePair<string, string>(entry.Key.ToString(), entry.Value.ToString()))
+                .ToArray();
+
+        public static string GetString(string key, string fallback = null) =>
             Environment.GetEnvironmentVariable(key) ?? fallback;
 
-        public static bool GetBool(string key, bool fallback = default(bool)) =>
+        public static bool GetBool(string key, bool fallback = false) =>
             bool.TryParse(Environment.GetEnvironmentVariable(key), out var value) ? value : fallback;
 
-        public static int GetInt(string key, int fallback = default(int)) =>
+        public static int GetInt(string key, int fallback = 0) =>
             int.TryParse(Environment.GetEnvironmentVariable(key), out var value) ? value : fallback;
 
-        public static double GetDouble(string key, double fallback = default(double)) =>
+        public static double GetDouble(string key, double fallback = 0) =>
             double.TryParse(Environment.GetEnvironmentVariable(key), NumberStyles.Any, CultureInfo.InvariantCulture,
                 out var value)
                 ? value
                 : fallback;
 
-        public static LoadOptions NoEnvVars() => LoadOptions.NoEnvVars();
+        [Obsolete("Use DoNotSetEnvVars instead")]
+        public static LoadOptions NoEnvVars() => DoNotSetEnvVars();
+        public static LoadOptions DoNotSetEnvVars() => LoadOptions.DoNotSetEnvVars();
         public static LoadOptions NoClobber() => LoadOptions.NoClobber();
         public static LoadOptions TraversePath() => LoadOptions.TraversePath();
+        public static LoadOptions ExcludeEnvVars() => LoadOptions.ExcludeEnvVars();
     }
 }

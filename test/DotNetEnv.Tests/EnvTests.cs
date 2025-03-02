@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -150,13 +151,13 @@ namespace DotNetEnv.Tests
         [Fact]
         public void LoadMultiTestNoEnvVars()
         {
-            var pairs = DotNetEnv.Env.NoEnvVars().LoadMulti(new[] { "./.env", "./.env2" });
+            var pairs = DotNetEnv.Env.DoNotSetEnvVars().LoadMulti(new[] { "./.env", "./.env2" });
             Assert.Equal("Other", pairs.LastOrDefault(x => x.Key == "NAME").Value);
             Environment.SetEnvironmentVariable("NAME", null);
-            pairs = DotNetEnv.Env.NoEnvVars().NoClobber().LoadMulti(new[] { "./.env", "./.env2" });
+            pairs = DotNetEnv.Env.DoNotSetEnvVars().NoClobber().LoadMulti(new[] { "./.env", "./.env2" });
             Assert.Equal("Toni", pairs.FirstOrDefault(x => x.Key == "NAME").Value);
             Environment.SetEnvironmentVariable("NAME", "Person");
-            pairs = DotNetEnv.Env.NoEnvVars().NoClobber().LoadMulti(new[] { "./.env", "./.env2" });
+            pairs = DotNetEnv.Env.DoNotSetEnvVars().NoClobber().LoadMulti(new[] { "./.env", "./.env2" });
             Assert.Null(pairs.FirstOrDefault(x => x.Key == "NAME").Value); // value from EnvironmentVariables is not contained with NoClobber
         }
 
@@ -178,7 +179,7 @@ namespace DotNetEnv.Tests
         }
 
         [Fact]
-        public void LoadNoSetEnvVarsTest()
+        public void LoadDoNoSetEnvVarsTest()
         {
             var expected = "totally the original value";
             Environment.SetEnvironmentVariable("NAME", null);
@@ -204,6 +205,21 @@ namespace DotNetEnv.Tests
             DotNetEnv.Env.Load("./.env_DNE");
             Assert.Equal(expected, Environment.GetEnvironmentVariable("URL"));
             // it didn't throw an exception and crash for a missing file
+        }
+
+        [Fact]
+        public void ExcludeEnvVarsTest()
+        {
+            const string envVarName = "URL";
+            const string initialEnvVarValue = "totally the original value";
+            const string envFileValue = "https://github.com/tonerdo";
+
+            Environment.SetEnvironmentVariable(envVarName, initialEnvVarValue);
+
+            var result = Env.Load("./.env", Env.ExcludeEnvVars());
+
+            Assert.Contains(new KeyValuePair<string, string>(envVarName, envFileValue), result);
+            Assert.NotEqual(initialEnvVarValue, Environment.GetEnvironmentVariable(envVarName));
         }
 
         [Fact]
@@ -275,11 +291,11 @@ namespace DotNetEnv.Tests
         }
 
         [Fact]
-        public void ParseInterpolatedNoEnvVarsTest()
+        public void ParseInterpolatedDoNotSetEnvVarsTest()
         {
             System.Environment.SetEnvironmentVariable("EXISTING_ENVIRONMENT_VARIABLE", "value");
             System.Environment.SetEnvironmentVariable("DNE_VAR", null);
-            var environmentDictionary = DotNetEnv.Env.NoEnvVars().Load("./.env_embedded").ToDotEnvDictionary();
+            var environmentDictionary = DotNetEnv.Env.DoNotSetEnvVars().Load("./.env_embedded").ToDotEnvDictionary();
 
             Assert.Equal("test", environmentDictionary["TEST"]);
             Assert.Equal("test1", environmentDictionary["TEST1"]);

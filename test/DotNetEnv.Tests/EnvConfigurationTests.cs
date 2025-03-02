@@ -49,7 +49,7 @@ namespace DotNetEnv.Tests
         public void AddSourceToBuilderAndLoad()
         {
             configuration = new ConfigurationBuilder()
-                .AddDotNetEnv(options: LoadOptions.NoEnvVars())
+                .AddDotNetEnv(options: LoadOptions.DoNotSetEnvVars())
                 .Build();
 
             Assert.Empty(configuration["EMPTY"]);
@@ -65,7 +65,7 @@ namespace DotNetEnv.Tests
         {
             // ./DotNetEnv.Tests/bin/Debug/netcoreapp3.1/DotNetEnv.Tests.dll -- get to the ./ (root of `test` folder)
             configuration = new ConfigurationBuilder()
-                .AddDotNetEnv("../../../../", LoadOptions.NoEnvVars())
+                .AddDotNetEnv("../../../../", LoadOptions.DoNotSetEnvVars())
                 .Build();
 
             Assert.Null(configuration["NAME"]);
@@ -76,7 +76,7 @@ namespace DotNetEnv.Tests
         public void AddSourceToBuilderAndLoadMulti()
         {
             configuration = new ConfigurationBuilder()
-                .AddDotNetEnvMulti(new[] { "./.env", "./.env2" }, LoadOptions.NoEnvVars())
+                .AddDotNetEnvMulti(new[] { "./.env", "./.env2" }, LoadOptions.DoNotSetEnvVars())
                 .Build();
 
             Assert.Equal("Other", configuration["NAME"]);
@@ -87,7 +87,7 @@ namespace DotNetEnv.Tests
         public void AddSourceToBuilderAndLoadMultiWithNoClobber()
         {
             configuration = new ConfigurationBuilder()
-                .AddDotNetEnvMulti(new[] { "./.env", "./.env2" }, LoadOptions.NoEnvVars().NoClobber())
+                .AddDotNetEnvMulti(new[] { "./.env", "./.env2" }, LoadOptions.DoNotSetEnvVars().NoClobber())
                 .Build();
 
             Assert.Equal("Toni", configuration["NAME"]);
@@ -100,7 +100,7 @@ namespace DotNetEnv.Tests
         public void AddSourceToBuilderAndLoadMultiWithClobber()
         {
             configuration = new ConfigurationBuilder()
-                .AddDotNetEnvMulti(new[] { "./.env", "./.env2" }, LoadOptions.NoEnvVars())
+                .AddDotNetEnvMulti(new[] { "./.env", "./.env2" }, LoadOptions.DoNotSetEnvVars())
                 .Build();
 
             Assert.Equal("Other", configuration["NAME"]);
@@ -113,7 +113,7 @@ namespace DotNetEnv.Tests
         public void AddSourceToBuilderAndFileDoesNotExist()
         {
             configuration = new ConfigurationBuilder()
-                .AddDotNetEnv("./.env_DNE", LoadOptions.NoEnvVars())
+                .AddDotNetEnv("./.env_DNE", LoadOptions.DoNotSetEnvVars())
                 .Build();
 
             Assert.Empty(configuration.AsEnumerable());
@@ -123,7 +123,7 @@ namespace DotNetEnv.Tests
         public void AddSourceToBuilderAndGetSection()
         {
             configuration = new ConfigurationBuilder()
-                .AddDotNetEnv("./.env_sections", LoadOptions.NoEnvVars())
+                .AddDotNetEnv("./.env_sections", LoadOptions.DoNotSetEnvVars())
                 .Build();
 
             var section = configuration.GetSection("SECTION");
