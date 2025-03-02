@@ -3,8 +3,67 @@ using System.Collections.Generic;
 
 namespace DotNetEnv
 {
+    public record struct EnvLoadOptions
+    {
+        public static EnvLoadOptions Default = new()
+        {
+            EnvVarOption = EnvVarOption.Default,
+            ClobberOption = ClobberOption.Clobber,
+            OnlyExactPath = true,
+        };
+
+        public EnvVarOption EnvVarOption { get; set; }
+        public ClobberOption ClobberOption { get; set; }
+        public bool OnlyExactPath { get; set; }
+
+        public static EnvLoadOptions DoNotSetEnvVars(EnvLoadOptions options) =>
+            options with { EnvVarOption = options.EnvVarOption & ~EnvVarOption.SetAll };
+
+        public static EnvLoadOptions NoClobber(EnvLoadOptions options) =>
+            options with { ClobberOption = ClobberOption.NoClobber };
+
+        public static EnvLoadOptions TraversePath(EnvLoadOptions options) =>
+            options with { OnlyExactPath = false };
+    }
+
+    public enum ClobberOption
+    {
+        Clobber = 0,
+        NoClobber = 1,
+        NoClobberButReturnActualValues = 2,
+    }
+
+    [Flags]
+    public enum EnvVarOption
+    {
+        Default = IncludeForInterpolation | SetProcess,
+        SetAll = SetProcess | SetUser | SetMachine,
+
+        None = 0,
+        IncludeForInterpolation = 1,
+        SetProcess = 2,
+        SetUser = 4,
+        SetMachine = 8,
+    }
+
+    [Obsolete]
     public class LoadOptions
     {
+        public static implicit operator EnvLoadOptions(LoadOptions loadOptions)
+        {
+            loadOptions ??= DEFAULT;
+            return new EnvLoadOptions
+            {
+                EnvVarOption = (loadOptions.SetEnvVars
+                    ? EnvVarOption.Default
+                    : EnvVarOption.None) | (loadOptions.IncludeEnvVars ? EnvVarOption.IncludeForInterpolation : 0),
+                ClobberOption = loadOptions.ClobberExistingVars
+                    ? ClobberOption.Clobber
+                    : ClobberOption.NoClobberButReturnActualValues,
+                OnlyExactPath = loadOptions.OnlyExactPath,
+            };
+        }
+
         public static readonly LoadOptions DEFAULT = new LoadOptions();
 
         /// <summary>Whether Environment Variables are set or not (process only; not persistent).</summary>

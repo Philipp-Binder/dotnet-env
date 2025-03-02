@@ -6,11 +6,11 @@ namespace DotNetEnv.Configuration
     {
         private readonly string[] paths;
 
-        private readonly LoadOptions options;
+        private readonly EnvLoadOptions? options;
 
         public EnvConfigurationSource(
             string[] paths,
-            LoadOptions options)
+            EnvLoadOptions? options)
         {
             this.paths = paths;
             this.options = options;

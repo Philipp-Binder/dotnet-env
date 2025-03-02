@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using DotNetEnv.Extensions;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 
 namespace DotNetEnv.Configuration
 {
@@ -9,14 +6,14 @@ namespace DotNetEnv.Configuration
     {
         private readonly string[] paths;
 
-        private readonly LoadOptions options;
+        private readonly EnvLoadOptions options;
 
         public EnvConfigurationProvider(
             string[] paths,
-            LoadOptions options)
+            EnvLoadOptions? options)
         {
             this.paths = paths;
-            this.options = options ?? LoadOptions.DEFAULT;
+            this.options = options ?? EnvLoadOptions.Default;
         }
 
         public override void Load()

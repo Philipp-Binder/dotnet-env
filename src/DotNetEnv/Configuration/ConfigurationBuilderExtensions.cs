@@ -7,7 +7,7 @@ namespace DotNetEnv.Configuration
         public static IConfigurationBuilder AddDotNetEnv(
             this IConfigurationBuilder builder,
             string path = null,
-            LoadOptions options = null)
+            EnvLoadOptions? options = null)
         {
 
             builder.Add(new EnvConfigurationSource(path == null ? null : new[] { path }, options));
@@ -17,7 +17,7 @@ namespace DotNetEnv.Configuration
         public static IConfigurationBuilder AddDotNetEnvMulti(
             this IConfigurationBuilder builder,
             string[] paths,
-            LoadOptions options = null)
+            EnvLoadOptions? options = null)
         {
             builder.Add(new EnvConfigurationSource(paths, options));
             return builder;

@@ -5,6 +5,7 @@
     <AssemblyName>DotNetEnv.Tests</AssemblyName>
     <PackageId>DotNetEnv.Tests</PackageId>
     <IsPackable>false</IsPackable>
+    <LangVersion>default</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
